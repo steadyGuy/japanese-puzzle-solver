@@ -1,7 +1,6 @@
 """Endpoints for the solver module."""
 from typing import List, Dict
 from test.test_solver import input_matrix_7x7
-import json
 from fastapi import APIRouter, HTTPException
 from gurobipy import GurobiError
 from pydantic import BaseModel
@@ -10,17 +9,16 @@ from solver.rooms_generator import generate_rooms
 from solver.solver import Solver
 from solver.utils import InvalidInputError
 
-
 router = APIRouter(
     prefix='/api',
     tags=['solver']
 )
 
-example_data_for_docs = json.dumps([
+example_data_for_docs: list = [
     {
         "coordinates": input_matrix_7x7
     }
-])
+]
 
 
 class InputData(BaseModel):
