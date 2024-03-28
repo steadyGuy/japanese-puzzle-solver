@@ -16,4 +16,13 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-app.include_router(solver.router)
+app.include_router(solver.router, responses={
+    400: {
+        "description": "Bad Request",
+        "content": {"application/json": {"example": {"detail": "Error message"}}},
+    },
+    422: {
+        "description": "Un-processable Entity",
+        "content": {"application/json": {"example": {"detail": "Error message"}}},
+    },
+}, )

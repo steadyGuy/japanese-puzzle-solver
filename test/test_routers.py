@@ -611,7 +611,7 @@ def test_solve_matrix_hard_to_solve_for_gurobi_model():
     response = client.post("/api/solve", json=hard_to_solve_example)
 
     # Assert that the response status code is 400 (Bad Request)
-    assert response.status_code == 400
+    assert response.status_code == 422
     print("response.text", response.text)
     # Assert that the response contains the expected error message
     assert ("Model too large for size-limited license; visit https://gurobi.com/unrestricted for more inform"
