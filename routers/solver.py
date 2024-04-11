@@ -1,10 +1,9 @@
 """Endpoints for the solver module."""
-from typing import List, Dict
-from test.test_solver import input_matrix_7x7
 from fastapi import APIRouter, HTTPException
 from gurobipy import GurobiError
-from pydantic import BaseModel
 
+from database import DB
+from models import Condition
 from solver.rooms_generator import generate_rooms
 from solver.solver import Solver
 from solver.utils import InvalidInputError
@@ -14,26 +13,9 @@ router = APIRouter(
     tags=['solver']
 )
 
-example_data_for_docs: list = [
-    {
-        "coordinates": input_matrix_7x7
-    }
-]
-
-
-class InputData(BaseModel):
-    """Input data for the solver endpoint"""
-    coordinates: List[Dict[str, str]]
-
-    model_config = {
-        "json_schema_extra": {
-            "examples": example_data_for_docs,
-        }
-    }
-
 
 @router.post('/solve')
-async def solve_matrix(data: InputData) -> list[list[str]]:
+async def solve_matrix(data: Condition) -> list[list[str]]:
     """
     This endpoint returns the root path. You need to provide a list of rooms (regions).
     Each room is a dictionary where the keys are the coordinates of the room and the values 
@@ -58,6 +40,7 @@ async def generate_matrix(num: int) -> list[dict[str, str]]:
     """
     try:
         data = generate_rooms(num)
+        await DB["generated-rooms"].insert_one({"coordinates": data})
         return data
     except InvalidInputError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
