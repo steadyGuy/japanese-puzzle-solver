@@ -6,7 +6,7 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from auth.models import TokenData, User, UserLogin
+from auth.models import TokenData, UserLogin
 from database import DB
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -33,7 +33,7 @@ async def authenticate_user(username: str, password: str):
     user = await get_user(username)
     if not user:
         return False
-    if not verify_password(password, user.hashed_password):
+    if not verify_password(password, user['hashed_password']):
         return False
     return user
 
@@ -45,7 +45,11 @@ async def get_user(username: str):
     user = await DB['users'].find_one({'username': username})
 
     if user:
-        return User(**user)
+        return {
+            "id": str(user["_id"]),
+            "username": user["username"],
+            "hashed_password": user["hashed_password"]
+        }
 
 
 async def create_user(user_data: UserLogin):
