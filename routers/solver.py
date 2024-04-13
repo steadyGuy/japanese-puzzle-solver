@@ -1,9 +1,10 @@
 """Endpoints for the solver module."""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from gurobipy import GurobiError
 
+from auth.utils import get_current_user
 from database import DB
-from models import Condition
+from solver.models import Condition
 from solver.rooms_generator import generate_rooms
 from solver.solver import Solver
 from solver.utils import InvalidInputError
@@ -33,7 +34,7 @@ async def solve_matrix(data: Condition) -> list[list[str]]:
 
 
 @router.get('/generate')
-async def generate_matrix(num: int) -> list[dict[str, str]]:
+async def generate_matrix(num: int, _: str = Depends(get_current_user)) -> list[dict[str, str]]:
     """
     This endpoint generates a random matrix of rooms. You need to provide the number of rooms.
     In response, you will get a list of rooms (regions).

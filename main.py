@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from database import DB
 
-from routers import solver
+from routers import auth, solver
 
 app = FastAPI()
 
@@ -24,10 +24,15 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
+app.include_router(auth.router)
 app.include_router(solver.router, responses={
     400: {
         "description": "Bad Request",
         "content": {"application/json": {"example": {"detail": "Error message"}}},
+    },
+    401: {
+        "description": "Unauthorized",
+        "content": {"application/json": {"example": {"detail": "Not authenticated"}}},
     },
     422: {
         "description": "Un-processable Entity",
