@@ -603,7 +603,7 @@ def test_solve_matrix_invalid_input():
     assert response.status_code == 400
     print("response.text", response.text)
     # Assert that the response contains the expected error message
-    assert "The amount of rows and columns must be between 5 and 23" in response.text
+    assert "The amount of rows and columns must be between 2 and 23" in response.text
 
 
 def test_solve_matrix_hard_to_solve_for_gurobi_model():
@@ -641,4 +641,4 @@ def test_generate_rooms_invalid_input():
     # Assert that the response status code is 400 (Bad Request)
     assert response.status_code == 400
     # Assert that the response contains the expected error message
-    assert "The amount of rows and columns must be between 5 and 23" in response.text
+    assert "The amount of rows and columns must be between 2 and 23" in response.text

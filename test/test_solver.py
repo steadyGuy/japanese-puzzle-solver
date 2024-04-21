@@ -96,8 +96,7 @@ def test_solution_matrix_7x7(solution_7x7):
 
 
 too_small_input = [
-    {'0,0': '', '0,1': 'S'},
-    {'1,0': ''},
+    {'0,0': ''},
 ]
 
 
@@ -106,7 +105,7 @@ def test_solution_too_small():
     with pytest.raises(InvalidInputError) as exc_info:
         Solver(input_matrix=too_small_input)
     assert str(
-        exc_info.value) == "The amount of rows and columns must be between 5 and 23"
+        exc_info.value) == "The amount of rows and columns must be between 2 and 23"
 
 
 too_big_input = [
@@ -119,7 +118,7 @@ def test_solution_too_big():
     with pytest.raises(InvalidInputError) as exc_info:
         Solver(input_matrix=too_big_input)
     assert str(
-        exc_info.value) == "The amount of rows and columns must be between 5 and 23"
+        exc_info.value) == "The amount of rows and columns must be between 2 and 23"
 
 
 different_rows_and_cols = [

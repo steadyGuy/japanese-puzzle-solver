@@ -26,9 +26,9 @@ def generate_room(length_limit):
 
 def generate_rooms(size):
     """Generate rooms."""
-    if size <= 4 or size >= 23:
+    if size <= 1 or size >= 23:
         raise InvalidInputError(
-            "The amount of rows and columns must be between 5 and 23")
+            "The amount of rows and columns must be between 2 and 23")
 
     cords_list = generate_cords_from_number(size)
 

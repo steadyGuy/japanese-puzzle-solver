@@ -2,7 +2,7 @@
 import random
 import pytest
 
-from solver.rooms_generator import generate_rooms
+from generators.generate_randomly import generate_rooms
 from solver.utils import InvalidInputError
 
 
@@ -21,16 +21,16 @@ def test_generate_rooms_valid_input():
 def test_generate_rooms_invalid_input():
     """Test for invalid input."""
     with pytest.raises(InvalidInputError) as exc_info:
-        size = 4  # Size less than 5
+        size = 1  # Size less than 2
         generate_rooms(size)
     assert str(
-        exc_info.value) == "The amount of rows and columns must be between 5 and 23"
+        exc_info.value) == "The amount of rows and columns must be between 2 and 23"
 
     with pytest.raises(InvalidInputError) as exc_info:
         size = 30  # Size greater than 26
         generate_rooms(size)
     assert str(
-        exc_info.value) == "The amount of rows and columns must be between 5 and 23"
+        exc_info.value) == "The amount of rows and columns must be between 2 and 23"
 
 
 def test_generate_rooms_output():

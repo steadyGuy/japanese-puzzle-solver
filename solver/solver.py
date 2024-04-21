@@ -156,9 +156,9 @@ class Solver:
                 "The amount of rows and columns of the matrix are not equal")
         # too big number would make the model too complex for
         # gurobi to solve in free version
-        if max_x < 4 or max_x >= 23:
+        if max_x < 1 or max_x >= 23:
             raise InvalidInputError(
-                "The amount of rows and columns must be between 5 and 23")
+                "The amount of rows and columns must be between 2 and 23")
 
         # Check for missing coordinates
         for x in range(max_x):
@@ -197,6 +197,7 @@ class Solver:
             inp.default_colour = GREY
 
         m = Model("Solver")
+        m.Params.LogToConsole = 0
         x = {
             (i, j, col): m.addVar(vtype=GRB.BINARY, obj=0, ub=1, lb=0, name="var", column=None)
             for (i, j), _ in self.grid_inputs.items() for col in
