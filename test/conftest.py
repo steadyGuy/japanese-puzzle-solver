@@ -1,14 +1,15 @@
 """Configuration file for pytest."""
 import asyncio
 import os
+from test.consts_input import input_matrix_7x7, input_matrix_10x10
 
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 
-
-from main import app
 from database import client
+from main import app
+from solver.solver import Solver
 
 
 @pytest_asyncio.fixture
@@ -35,3 +36,15 @@ def event_loop():
     yield loop
     _ = client.drop_database(os.getenv('DB_NAME', 'test'))
     loop.close()
+
+
+@pytest.fixture
+def solution_10x10():
+    """Create a Solver instance for 10x10 matrix"""
+    return Solver(input_matrix=input_matrix_10x10)
+
+
+@pytest.fixture
+def solution_7x7():
+    """Create a Solver instance for 7x7 matrix"""
+    return Solver(input_matrix=input_matrix_7x7)

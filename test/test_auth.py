@@ -1,4 +1,4 @@
-
+"""Test cases for auth module."""
 
 import pytest
 from fastapi import HTTPException

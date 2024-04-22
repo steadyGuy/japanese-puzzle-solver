@@ -1,12 +1,14 @@
 """Test endpoints"""
 import asyncio
 import json
-from fastapi import HTTPException
-from httpx import AsyncClient
-import pytest
-from test.test_solver import input_matrix_10x10, matrix_10x10_real_solution
+from test.test_solver import matrix_10x10_real_solution
+from test.consts_input import input_matrix_10x10
 import numpy as np
+import pytest
+
 from fastapi.testclient import TestClient
+from httpx import AsyncClient
+
 from main import app
 
 # Create a test client using the TestClient class provided by FastAPI
