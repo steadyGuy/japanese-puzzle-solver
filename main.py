@@ -1,18 +1,11 @@
 """Entry point of the application."""
-
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
-from database import DB
 
+import load_env  # pylint: disable=W0611
 from routers import auth, solver
 
 app = FastAPI()
-
-# Load .env file
-load_dotenv()
-
-print("Connected to MongoDB", DB)
 
 # Configure CORS
 app.add_middleware(

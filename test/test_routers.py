@@ -1,11 +1,16 @@
 """Test endpoints"""
+import asyncio
+import json
+from fastapi import HTTPException
+from httpx import AsyncClient
+import pytest
 from test.test_solver import input_matrix_10x10, matrix_10x10_real_solution
 import numpy as np
 from fastapi.testclient import TestClient
-from main import app  # Assuming your main FastAPI application is in a file named 'main.py'
+from main import app
 
 # Create a test client using the TestClient class provided by FastAPI
-client = TestClient(app=app)
+test_client = TestClient(app=app)
 
 hard_to_solve_example = {
     "coordinates": [
@@ -581,7 +586,7 @@ def test_solve_matrix_valid_input():
     valid_data = {"coordinates": input_matrix_10x10}
 
     # Send POST request to /solve endpoint with valid data
-    response = client.post("/api/solve", json=valid_data)
+    response = test_client.post("/api/solve", json=valid_data)
 
     # Assert that the response status code is 200
     assert response.status_code == 200
@@ -597,7 +602,7 @@ def test_solve_matrix_invalid_input():
     invalid_data = {"coordinates": []}
 
     # Send POST request to /solve endpoint with invalid data
-    response = client.post("/api/solve", json=invalid_data)
+    response = test_client.post("/api/solve", json=invalid_data)
 
     # Assert that the response status code is 400 (Bad Request)
     assert response.status_code == 400
@@ -608,37 +613,128 @@ def test_solve_matrix_invalid_input():
 
 def test_solve_matrix_hard_to_solve_for_gurobi_model():
     """Test for solving a matrix that exceeds the size limit of the Gurobi model."""
-    response = client.post("/api/solve", json=hard_to_solve_example)
+    response = test_client.post("/api/solve", json=hard_to_solve_example)
 
     # Assert that the response status code is 400 (Bad Request)
     assert response.status_code == 422
     print("response.text", response.text)
     # Assert that the response contains the expected error message
+    # pylint: disable=C0301
     assert ("Model too large for size-limited license; visit https://gurobi.com/unrestricted for more inform"
             in response.text)
 
 
-def test_generate_rooms_valid_input():
+@pytest.mark.asyncio
+async def test_generate_rooms_valid_input(user_token):
     """Test for generating rooms with valid input."""
     # Define valid input data (e.g., number of rooms)
     valid_num = 5
-
+    print("user_tokenuser_tokenuser_tokenuser_token", user_token)
     # Send GET request to /generate endpoint with valid input
-    response = client.get(f"/api/generate?num={valid_num}")
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.get(
+            f"/api/generate?num={valid_num}", headers={"Authorization": f"Bearer {user_token}"})
 
     # Assert that the response status code is 200
     assert response.status_code == 200
 
 
-def test_generate_rooms_invalid_input():
+@pytest.mark.asyncio
+async def test_generate_rooms_invalid_input(user_token):
     """Test for generating rooms with invalid input."""
     # Define invalid input data (e.g., negative number of rooms)
     invalid_num = -1
-
     # Send GET request to /generate endpoint with invalid input
-    response = client.get(f"/api/generate?num={invalid_num}")
+
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.get(
+            f"/api/generate?num={invalid_num}", headers={"Authorization": f"Bearer {user_token}"})
 
     # Assert that the response status code is 400 (Bad Request)
     assert response.status_code == 400
     # Assert that the response contains the expected error message
     assert "The amount of rows and columns must be between 2 and 23" in response.text
+
+
+@pytest.mark.asyncio
+async def test_get_condition_by_index():
+    """Test for getting a condition by index."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        res = await ac.get("/api/generate-matrices-by-size?matrix_size=2&start=0&end=2")
+        # we need to wait manually, as we didn't await when save to database
+        # (for performance reasons)
+        await asyncio.sleep(0.5)
+        assert res.status_code == 200
+        condition_res = await ac.get("/api/get-condition?matrix_size=2&index=1")
+        assert condition_res.status_code == 200
+
+    assert condition_res.status_code == 200
+    expected_condition = '[{"0,1": ""}, {"0,0": "", "1,0": "", "1,1": ""}]'
+    condition = json.loads(condition_res.json()['condition'])
+
+    assert json.dumps(condition) == expected_condition
+
+
+@pytest.mark.asyncio
+async def test_document_not_found():
+    """Test for getting a condition by index that does not exist."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        res = await ac.get("/api/generate-matrices-by-size?matrix_size=3&start=0&end=5")
+        assert res.status_code == 200
+        # we need to wait manually, as we didn't await when save to database
+        # (for performance reasons)
+        await asyncio.sleep(0.5)
+        res = await ac.get("/api/get-condition?matrix_size=3&index=55")
+
+    assert str(
+        res.text) == '{"detail":"Document index out of range"}'
+
+
+@pytest.mark.asyncio
+async def test_collection_not_found():
+    """Test for getting a condition by index when the collection does not exist."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        res = await ac.get("/api/get-condition?matrix_size=44&index=1")
+
+    assert str(
+        res.text) == '{"detail":"Document not found"}'
+
+
+@pytest.mark.asyncio
+async def test_matrix_2x2_full():
+    """Test for getting a condition by index when the collection does not exist."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        res = await ac.get("/api/generate-matrices-by-size?matrix_size=2&symbols=SA")
+
+    assert str(
+        res.text) == "276"
+
+
+@pytest.mark.asyncio
+async def test_generate_user_conditions(user_token):
+    """Test for getting conditions by user token."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.get(
+            "/api/conditions", headers={"Authorization": f"Bearer {user_token}"})
+
+    # Assert that the response status code is 200
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_not_found_conditions_for_user():
+    """Test for getting conditions by user token when no conditions are found."""
+    test_user = {"username": "conditions_not_found", "password": "123"}
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        await ac.post(
+            "/api/register-user",
+            json=test_user,
+        )
+        res = await ac.post("/api/login", data=test_user, headers={
+            "Content-Type": "application/x-www-form-urlencoded"})
+        data = res.json()
+
+        response = await ac.get(
+            "/api/conditions", headers={"Authorization": f"Bearer {data['access_token']}"})
+
+    assert response.text == '{"detail":"404: No matrices found for the specified user"}'

@@ -51,10 +51,6 @@ async def generate_matrix(num: int, user: dict = Depends(get_current_user)) -> l
         return data
     except InvalidInputError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except GurobiError as e:
-        raise HTTPException(status_code=422, detail=str(e)) from e
 
 
 @router.get('/conditions')
@@ -115,6 +111,5 @@ async def get_condition_by_index(
                 # optional
                 "solution": json_util.dumps(doc[0]["solution"]),
             }
-        raise HTTPException(status_code=404, detail="Document not found")
 
     raise HTTPException(status_code=404, detail="Document not found")
