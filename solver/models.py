@@ -1,5 +1,5 @@
 """Models"""
-from test.test_solver import input_matrix_7x7
+from test.consts_input import input_matrix_7x7
 from typing import Dict, List
 
 from pydantic import BaseModel

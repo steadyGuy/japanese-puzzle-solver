@@ -68,9 +68,8 @@ async def get_conditions_by_user(user: dict = Depends(get_current_user)) -> list
                 }
                 for doc in conditions
             ]
-        else:
-            raise HTTPException(
-                status_code=404, detail="No matrices found for the specified user")
+        raise HTTPException(
+            status_code=404, detail="No matrices found for the specified user")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

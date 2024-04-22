@@ -15,7 +15,6 @@ class Solver:
         if input_matrix is None:
             input_matrix = []
         self.boundary_cells = 0
-        self.loop_found = None
         self.visited_black_cells = []
         self.visited_cells = []
 
@@ -91,14 +90,15 @@ class Solver:
             return
         self.visited_cells.append(cell)
         self.visited_black_cells.append(cell)
+        loop_found = None
         for (i, j) in self.diagonal_neighbours(cell):
             if xv[(i, j, 1)] > 0.9:  # if the neighbouring cell is black
                 # If the neighbouring cell is NOT the previous cell, but it has been visited,
                 # then we have found a loop
                 if (i, j) != prev_cell and (i, j) in self.visited_cells:
-                    self.loop_found = True
+                    loop_found = True
                     return
-                if not self.loop_found:
+                if not loop_found:
                     self.follow_black_cells_loop(cell, (i, j), xv)
 
     # Iterate through all diagonally connected black cells.
@@ -142,8 +142,8 @@ class Solver:
         all_keys = set()
 
         # Accumulate all keys
-        for grid_dict in regions:
-            all_keys.update(grid_dict.keys())
+        for x in regions:
+            all_keys.update(x.keys())
 
         # Calculate max_x and max_y
         for coord in all_keys:
@@ -175,13 +175,13 @@ class Solver:
             region_symbol = ''
             grid_inputs = []
             for coord, symbol in region.items():
-                i, j = map(int, coord.split(','))
+                x, y = map(int, coord.split(','))
                 if symbol not in ('', 'S', 'A'):
                     raise ValueError(
                         "Invalid value in coordinates, must be empty string or 'S'/'A'.")
 
-                grid_input_obj = ValueInput(i, j, GREY)
-                self.grid_inputs[(i, j)] = grid_input_obj
+                grid_input_obj = ValueInput(x, y, GREY)
+                self.grid_inputs[(x, y)] = grid_input_obj
                 grid_inputs.append(grid_input_obj)
                 if symbol:
                     grid_input_obj.symbol = symbol
@@ -190,19 +190,8 @@ class Solver:
             self.regions.append(region_obj)
             region_obj.group_grid_inputs()
 
-    def solve(self):
-        """Matrix solver"""
-        self.lazy_constraints_added = 0
-        for inp in self.grid_inputs.values():
-            inp.default_colour = GREY
-
-        m = Model("Solver")
-        m.Params.LogToConsole = 0
-        x = {
-            (i, j, col): m.addVar(vtype=GRB.BINARY, obj=0, ub=1, lb=0, name="var", column=None)
-            for (i, j), _ in self.grid_inputs.items() for col in
-            [0, 1]
-        }
+    def one_ort_and_vert(self, m, x):
+        """One, orthogonal and vertical constraints"""
 
         # select one constraint
         for (i, j), _ in self.grid_inputs.items():
@@ -210,6 +199,26 @@ class Solver:
             one_constraint = black_1 + white_1 == 1
             m.addConstr(one_constraint, name='one constraint')
 
+        vert_orthogonal = {}
+        for (i, j), inp in self.grid_inputs.items():
+            if inp.south:
+                neighbours = self.vert_neigh(inp.get_pos())
+                if neighbours:
+                    vert_orthogonal[(i, j)] = m.addConstr(
+                        quicksum(x[ii, jj, 1]
+                                 for (ii, jj) in neighbours) >= 1)
+
+        hor_orthogonal = {}
+        for (i, j), inp in self.grid_inputs.items():
+            if inp.east:
+                neighbours = self.hor_neigh(inp.get_pos())
+                if neighbours:
+                    hor_orthogonal[(i, j)] = m.addConstr(
+                        quicksum(x[ii, jj, 1]
+                                 for (ii, jj) in neighbours) >= 1)
+
+    def region_constraints(self, m, x):
+        """Region constraints"""
         # region symbol
         for region in self.regions:
             if region.symbol:
@@ -233,29 +242,29 @@ class Solver:
                             m.addConstr(
                                 constraint, name='not_equal_' + str(i) + '_' + str(j))
 
+    def solve(self):
+        """Matrix solver"""
+        self.lazy_constraints_added = 0
+        for inp in self.grid_inputs.values():
+            inp.default_colour = GREY
+
+        m = Model("Solver")
+        m.Params.LogToConsole = 0
+        x = {
+            (i, j, col): m.addVar(vtype=GRB.BINARY, obj=0, ub=1, lb=0, name="var", column=None)
+            for (i, j), _ in self.grid_inputs.items() for col in
+            [0, 1]
+        }
+
+        self.region_constraints(m, x)
+
         # AdjacentBlack
         _ = [m.addConstr(
             quicksum(x[ii, jj, 1] for (ii, jj) in self.cell_neigh(
                 (i, j))) <= len(self.cell_neigh((i, j))) * (1 - x[i, j, 1]))
              for (i, j), _ in self.grid_inputs.items()]
 
-        vert_orthogonal = {}
-        for (i, j), inp in self.grid_inputs.items():
-            if inp.south:
-                neighbours = self.vert_neigh(inp.get_pos())
-                if neighbours:
-                    vert_orthogonal[(i, j)] = m.addConstr(
-                        quicksum(x[ii, jj, 1]
-                                 for (ii, jj) in neighbours) >= 1)
-
-        hor_orthogonal = {}
-        for (i, j), inp in self.grid_inputs.items():
-            if inp.east:
-                neighbours = self.hor_neigh(inp.get_pos())
-                if neighbours:
-                    hor_orthogonal[(i, j)] = m.addConstr(
-                        quicksum(x[ii, jj, 1]
-                                 for (ii, jj) in neighbours) >= 1)
+        self.one_ort_and_vert(m, x)
 
         # ConnectedAtLeast
         _ = [
@@ -266,8 +275,7 @@ class Solver:
         def callback(model, where):
             if where == GRB.callback.MIPSOL:
 
-                xv = {k: v for (k, v) in zip(
-                    x.keys(), model.cbGetSolution(list(x.values())))}
+                xv = dict(zip(x.keys(), model.cbGetSolution(list(x.values()))))
 
                 # upd current solution in grid_inputs
                 for (i, j), grid_input_new in self.grid_inputs.items():
@@ -299,10 +307,10 @@ class Solver:
                 for k in xv:
                     # If cell is black and hasn't been checked yet
                     if xv[(k[0], k[1], 1)] > 0.9 and (k[0], k[1]) not in self.visited_black_cells:
-                        self.loop_found = False
+                        loop_found = False
                         self.visited_cells = []
                         self.follow_black_cells_loop(0, (k[0], k[1]), xv)
-                        if self.loop_found:
+                        if loop_found:
                             # PURGE TRAILING POINTS:
                             self.purge_trails(loop_mode=True)
 
@@ -333,7 +341,7 @@ class Solver:
             matrix.append(row)
 
         for inp in self.grid_inputs.values():
-            matrix[inp.y_pos][inp.x_pos] = inp.default_colour
+            matrix[inp.pos[1]][inp.pos[0]] = inp.get_colour()
             if inp.symbol:
-                matrix[inp.y_pos][inp.x_pos] += f"/{inp.symbol}"
+                matrix[inp.pos[1]][inp.pos[0]] += f"/{inp.symbol}"
         return matrix

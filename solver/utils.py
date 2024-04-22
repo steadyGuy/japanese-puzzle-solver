@@ -13,7 +13,7 @@ class Region:
 
     def get_pos(self):
         """Get the coordinates of the region (room)."""
-        return [(grid_input.x_pos, grid_input.y_pos) for grid_input in self.grid_inputs]
+        return [(grid_input.pos[0], grid_input.pos[1]) for grid_input in self.grid_inputs]
 
     def group_grid_inputs(self):
         """Group grid inputs based on their position."""
@@ -34,8 +34,7 @@ class ValueInput:
     """ValueInput class to represent a cell in the grid."""
 
     def __init__(self, x_pos=None, y_pos=None, default_colour=None):
-        self.x_pos = x_pos
-        self.y_pos = y_pos
+        self.pos = (x_pos, y_pos)
         self.symbol = ''
         self.default_colour = default_colour
 
@@ -46,7 +45,11 @@ class ValueInput:
 
     def get_pos(self):
         """Get the coordinates of the cell."""
-        return self.x_pos, self.y_pos
+        return self.pos[0], self.pos[1]
+
+    def get_colour(self):
+        """Get the colour of the cell."""
+        return self.default_colour
 
 
 def build_matrix(cords, x_matrix):
